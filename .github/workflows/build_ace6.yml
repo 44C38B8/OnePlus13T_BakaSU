@@ -81,7 +81,7 @@ jobs:
           cp susfs4ksu/kernel_patches/fs/* ./kernel_platform/common/fs/
           cp susfs4ksu/kernel_patches/include/linux/* ./kernel_platform/common/include/linux/
           cd kernel_platform/common/
-          # sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' fs/proc/base.c
+          sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' fs/proc/base.c
           patch -p1 < 50_add_susfs_in_gki-android15-6.6.patch || true
 
       - name: Configure SUSFS
