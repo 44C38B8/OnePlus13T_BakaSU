@@ -3,8 +3,31 @@ name: OnePlus_Ace6
 on:
   workflow_dispatch:
 
+schedule:
+    - cron: '0 22 * * *'
+
 jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Check upstream
+        id: check
+        run: |
+          git clone https://github.com/Baka-SU/BakaSU.git
+          cd BakaSU/
+          KSU_VERSION=$(expr $(git rev-list --count HEAD 2>/dev/null || echo 13000) + 30700)
+          LATEST_TAG=$(git ls-remote --tags https://github.com/44C38B8/oneplus13T_BakaSU.git | tail -n1 | sed 's/.*\///')
+          if [ "$KSU_VERSION" != "LATEST_TAG" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: check-update
+    if: needs.check-update.outputs.changed == 'true'
     runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
@@ -59,18 +82,13 @@ jobs:
           rm kernel_platform/common/android/abi_gki_protected_exports_*
           rm kernel_platform/msm-kernel/android/abi_gki_protected_exports_*
 
-      - name: Initialize ReSukiSU
+      - name: Initialize BakaSU
         run: |
           cd kernel_workspace/kernel_platform/
-          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
+          curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh" | bash
           echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
-          cd ..
-          git clone https://github.com/ReSukiSU/ReSukiSU_Patches.git
-          cp ReSukiSU_Patches/scope-minimized/kernel-gki-android15-6.6.patch kernel_platform/common/
-          cd kernel_platform/common/
-          patch -p1 < kernel-gki-android15-6.6.patch || true
-          cd ../KernelSU
-          KSU_VERSION=$(expr $(git rev-list --count "$KSU_MANAGER_BRANCH" 2>/dev/null || echo 13000) + 30700)
+          cd KernelSU
+          KSU_VERSION=$(expr $(git rev-list --count HEAD 2>/dev/null || echo 13000) + 30700)
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
 
       - name: Add SUSFS
@@ -142,7 +160,7 @@ jobs:
           git clone https://github.com/Numbersf/AnyKernel3 --depth=1
           cp oImage AnyKernel3/Image
           cd AnyKernel3
-          zip -r ./OnePlusAce6_ReSukiSU_${{ env.KSUVER }}.zip *
+          zip -r ./OnePlusAce6_BakaSU_${{ env.KSUVER }}.zip *
 
       - name: Get Latest Manager APK
         continue-on-error: true
@@ -150,8 +168,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd kernel_workspace/
-          run_id=$(gh api "repos/ReSukiSU/ReSukiSU/actions/workflows/build-manager.yml/runs?branch=main&status=success&event=push&per_page=1" --jq '.workflow_runs[0].id' || true)
-          artifact_url=$(gh api "repos/ReSukiSU/ReSukiSU/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"Manager-release\") | .archive_download_url" | head -n1)
+          run_id=$(gh api "repos/Baka-SU/BakaSU/actions/workflows/build-manager.yml/runs?branch=main&status=success&event=push&per_page=1" --jq '.workflow_runs[0].id' || true)
+          artifact_url=$(gh api "repos/Baka-SU/BakaSU/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"Manager-release\") | .archive_download_url" | head -n1)
           curl -fL -H "Authorization: token $GITHUB_TOKEN" -o "Manager-release.zip" "$artifact_url"
           unzip -j "Manager-release.zip" "*arm64-v8a*.apk" -d .
 
@@ -159,11 +177,11 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ env.KSUVER }}
-          body: 一加Ace6_ReSukiSU_${{ env.KSUVER }}
+          body: 一加13T、一加Ace6 BakaSU ${{ env.KSUVER }}
           tag_name: ${{ env.KSUVER }}
           prerelease: true
           files: |
-            ./kernel_workspace/kernel_platform/common/out/arch/arm64/boot/AnyKernel3/*ReSukiSU*.zip
-            ./kernel_workspace/*arm64-v8a*.apk
+            ./kernel_workspace/kernel_platform/common/out/arch/arm64/boot/AnyKernel3/*BakaSU*.zip
+            ./kernel_workspace/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
