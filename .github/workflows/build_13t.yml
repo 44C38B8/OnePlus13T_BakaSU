@@ -3,7 +3,7 @@ name: OnePlus_13T
 on:
   workflow_dispatch:
 
-schedule:
+  schedule:
     - cron: '0 22 * * *'
 
 jobs:
