@@ -94,7 +94,7 @@ jobs:
       - name: Add SUSFS
         run: |
           cd kernel_workspace/
-          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android15-6.6-dev --depth=1
+          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android15-6.6 --depth=1
           cp susfs4ksu/kernel_patches/50_add_susfs_in_gki-android15-6.6.patch ./kernel_platform/common/
           cp susfs4ksu/kernel_patches/fs/* ./kernel_platform/common/fs/
           cp susfs4ksu/kernel_patches/include/linux/* ./kernel_platform/common/include/linux/
